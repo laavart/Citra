@@ -1,8 +1,9 @@
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class Citra {
+
+    private Connection connection = null;
+    private Statement statement = null;
 
     static Connection connectDB(Database DB , String Path, String DB_User, String DB_AccessToken){
         try {
@@ -13,4 +14,13 @@ public class Citra {
             return null;
         }
     }
+
+    static Statement generateStatement(Connection DB) throws SQLException {
+        return DB.createStatement();
+    }
+
+    public void searchInDB(String name) throws SQLException {
+        ResultSet resultSet = statement.executeQuery("show tables;");
+    }
+
 }
