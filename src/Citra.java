@@ -4,10 +4,9 @@ import java.sql.SQLException;
 
 public class Citra {
 
-    static Connection connectDB(Database DB , String Hostname, int Port, String DB_User, String DB_AccessToken){
+    static Connection connectDB(Database DB , String Path, String DB_User, String DB_AccessToken){
         try {
             Class.forName(DB.getDriver());
-            String Path = "";
             return DriverManager.getConnection( Path , DB_User, DB_AccessToken);
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
