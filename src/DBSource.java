@@ -1,4 +1,4 @@
-public enum databases {
+public enum DBSource {
     MYSQL("com.mysql.jdbc.Driver","jdbc:mysql://","/"),
     ORACLE("oracle.jdbc.driver.OracleDriver","jdbc:oracle:thin:@",":"),
     DB2("COM.ibm.db2.jdbc.net.DB2Driver","jdbc:db2:","/"),
@@ -8,7 +8,7 @@ public enum databases {
     final String Path;
     final String Link;
 
-    databases(String DB_driver, String Path, String Link) {
+    DBSource(String DB_driver, String Path, String Link) {
         this.DB_driver = DB_driver;
         this.Path = Path;
         this.Link = Link;
