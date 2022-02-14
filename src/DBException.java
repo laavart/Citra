@@ -1,5 +1,4 @@
-public class DBInvalidException extends Exception{
-
+class DBInvalidException extends Exception{
     public DBInvalidException() {
         super("Database and Arguments not match !");
     }
