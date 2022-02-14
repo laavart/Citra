@@ -103,7 +103,10 @@ public class Database {
     }
 
     public void createTable(String table, HashMap<String,String> fields) throws SQLException {
-        String query = "";
+        String query = "create table "+table+" (";
+        for(var x: fields.keySet()){
+
+        }
         statement.executeUpdate(query);
     }
 
