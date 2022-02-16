@@ -1,6 +1,5 @@
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class Database {
 
@@ -8,8 +7,6 @@ public class Database {
     private String hostname;
     private String port;
     private String database;
-    private String user;
-    private String token;
 
     private Connection connection = null;
     private Statement statement = null;
@@ -43,13 +40,85 @@ public class Database {
                 db.hostname = hostname;
                 db.port = port;
                 db.database = database;
-                db.user = user;
-                db.token = token;
 
                 db.connection = DriverManager.getConnection(source.getPath(hostname, port, database), user, token);
                 System.out.println("Connection Established !");
 
                 db.statement = db.connection.createStatement();
+
+                if(!db.searchTable("token_master")){
+                    db.statement.executeUpdate(
+                            "create table token_master (" +
+                                    "uID int primary key, " +
+                                    "Password varchar(128) unique, " +
+                                    "SecurityCode varchar(7) unique" +
+                                    ");"
+                    );
+                }
+                if(!db.searchTable("comm_master")){
+                    db.statement.executeUpdate(
+                            "create table comm_master (" +
+                                    "uID int primary key, " +
+                                    "Email varchar(40) unique, " +
+                                    "Mobile varchar(10) unique" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_master")){
+                    db.statement.executeUpdate(
+                            "create table user_master (" +
+                                    "uID int primary key, " +
+                                    "Name varchar(35), " +
+                                    "DOB date, " +
+                                    "Address int, " +
+                                    "foreign key (Address) references user_address(aID)" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_address")){
+                    db.statement.executeUpdate(
+                            "create table user_address (" +
+                                    "aID int primary key, " +
+                                    "AddressLine1 varchar(40), " +
+                                    "AddressLine2 varchar(40), " +
+                                    "PostalCode int, " +
+                                    "CountryCode int, " +
+                                    "foreign key (PostalCode) references user_address_code_postal(pID), " +
+                                    "foreign key (CountryCode) references user_address_code_country(cID)" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_address_code_postal")){
+                    db.statement.executeUpdate(
+                            "create table user_address_code_postal (" +
+                                    "pID int primary key," +
+                                    "City varchar(40)," +
+                                    "State int, " +
+                                    "foreign key (State) references user_address_code_state(sID)" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_address_code_state")){
+                    db.statement.executeUpdate(
+                            "create table user_address_code_state (" +
+                                    "sID int primary key," +
+                                    "State varchar(40)" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_address_code_country")){
+                    db.statement.executeUpdate(
+                            "create table user_address_code_country (" +
+                                    "cID int primary key," +
+                                    "Country varchar(40)" +
+                                    ");"
+                    );
+                }
 
                 return db;
             }
@@ -71,13 +140,85 @@ public class Database {
                 db.source = source;
                 db.hostname = hostname;
                 db.database = database;
-                db.user = user;
-                db.token = token;
 
                 db.connection = DriverManager.getConnection(source.getPath(hostname, database), user, token);
                 System.out.println("Connection Established !");
 
                 db.statement = db.connection.createStatement();
+
+                if(!db.searchTable("token_master")){
+                    db.statement.executeUpdate(
+                            "create table token_master (" +
+                                    "uID int primary key, " +
+                                    "Password varchar(128) unique, " +
+                                    "SecurityCode varchar(7) unique" +
+                                    ");"
+                    );
+                }
+                if(!db.searchTable("comm_master")){
+                    db.statement.executeUpdate(
+                            "create table comm_master (" +
+                                    "uID int primary key, " +
+                                    "Email varchar(40) unique, " +
+                                    "Mobile varchar(10) unique" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_master")){
+                    db.statement.executeUpdate(
+                            "create table user_master (" +
+                                    "uID int primary key, " +
+                                    "Name varchar(35), " +
+                                    "DOB date, " +
+                                    "Address int, " +
+                                    "foreign key (Address) references user_address(aID)" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_address")){
+                    db.statement.executeUpdate(
+                            "create table user_address (" +
+                                    "aID int primary key, " +
+                                    "AddressLine1 varchar(40), " +
+                                    "AddressLine2 varchar(40), " +
+                                    "PostalCode int, " +
+                                    "CountryCode int, " +
+                                    "foreign key (PostalCode) references user_address_code_postal(pID), " +
+                                    "foreign key (CountryCode) references user_address_code_country(cID)" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_address_code_postal")){
+                    db.statement.executeUpdate(
+                            "create table user_address_code_postal (" +
+                                    "pID int primary key," +
+                                    "City varchar(40)," +
+                                    "State int, " +
+                                    "foreign key (State) references user_address_code_state(sID)" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_address_code_state")){
+                    db.statement.executeUpdate(
+                            "create table user_address_code_state (" +
+                                    "sID int primary key," +
+                                    "State varchar(40)" +
+                                    ");"
+                    );
+                }
+
+                if(!db.searchTable("user_address_code_country")){
+                    db.statement.executeUpdate(
+                            "create table user_address_code_country (" +
+                                    "cID int primary key," +
+                                    "Country varchar(40)" +
+                                    ");"
+                    );
+                }
 
                 return db;
             }
@@ -100,14 +241,6 @@ public class Database {
             }
             return false;
         }
-    }
-
-    public void createTable(String table, HashMap<String,String> fields) throws SQLException {
-        String query = "create table "+table+" (";
-        for(var x: fields.keySet()){
-
-        }
-        statement.executeUpdate(query);
     }
 
 }
