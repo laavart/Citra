@@ -1,9 +1,11 @@
 import java.sql.*;
 import java.util.ArrayList;
 
+import Exception.*;
+
 public class Database {
 
-    private DBSource source;
+    private Source source;
     private String hostname;
     private String port;
     private String database;
@@ -11,16 +13,16 @@ public class Database {
     private Connection connection = null;
     private Statement statement = null;
 
-    private static ArrayList<DBSource> CheckForPort;
+    private static ArrayList<Source> CheckForPort;
     static {
         CheckForPort = new ArrayList<>(1);
-        CheckForPort.add(DBSource.MYSQL);
+        CheckForPort.add(Source.MYSQL);
     }
 
-    private static ArrayList<DBSource> CheckByOwner;
+    private static ArrayList<Source> CheckByOwner;
     static {
         CheckByOwner = new ArrayList<>(1);
-        CheckByOwner.add(DBSource.ORACLE);
+        CheckByOwner.add(Source.ORACLE);
     }
 
     private Database(){
@@ -28,7 +30,7 @@ public class Database {
         this.port = "";
     }
 
-    static Database connect(DBSource source , String hostname, String port, String database, String user, String token) throws DBInvalidException {
+    public static Database connect(Source source , String hostname, String port, String database, String user, String token) throws DBInvalidException {
         if(CheckForPort.contains(source)){
             throw new DBInvalidException();
         }
@@ -129,7 +131,7 @@ public class Database {
         }
     }
 
-    static Database connect(DBSource source , String hostname, String database, String user, String token) throws DBInvalidException {
+    public static Database connect(Source source , String hostname, String database, String user, String token) throws DBInvalidException {
         if(!CheckForPort.contains(source)){
             throw new DBInvalidException();
         }
@@ -150,8 +152,8 @@ public class Database {
                     db.statement.executeUpdate(
                             "create table token_master (" +
                                     "uID int primary key, " +
-                                    "Password varchar(128) unique, " +
-                                    "SecurityCode varchar(7) unique" +
+                                    "Token varchar(128) unique, " +
+                                    "Code varchar(7) unique" +
                                     ");"
                     );
                 }
@@ -169,6 +171,7 @@ public class Database {
                     db.statement.executeUpdate(
                             "create table user_master (" +
                                     "uID int primary key, " +
+                                    "User varchar(128) unique, " +
                                     "Name varchar(35), " +
                                     "DOB date, " +
                                     "Address int, " +
@@ -241,6 +244,52 @@ public class Database {
             }
             return false;
         }
+    }
+
+    public boolean checkForUser(String user) throws SQLException {
+        ResultSet resultSet = statement.executeQuery(
+                "select * " +
+                        "from user_master " +
+                        "where User = '"+user+"';");
+        while(resultSet.next()) return true;
+        return false;
+    }
+
+    public boolean validateUser(String user, String token) throws SQLException{
+        if(checkForUser(user)) {
+            ResultSet resultSet = statement.executeQuery(
+                    "select Token " +
+                            "from token_master " +
+                            "where uID = any(" +
+                                "select uID from user_master where User = '"+user+"'" +
+                            ");"
+            );
+            while (resultSet.next() && resultSet.getString("Token").equals(token)) return true;
+        }
+        return false;
+    }
+
+    public boolean checkCode(String user, String code) throws SQLException{
+        if(checkForUser(user)) {
+            ResultSet resultSet = statement.executeQuery(
+                    "select Code " +
+                            "from token_master " +
+                            "where uID = any(" +
+                            "select uID from user_master where User = '"+user+"'" +
+                            ");"
+            );
+            while (resultSet.next() && resultSet.getString("Code").equals(code)) return true;
+        }
+        return false;
+    }
+
+    public void addNewUser(Client client) throws SQLException{
+
+    }
+
+    public void close() throws SQLException {
+        statement.close();
+        connection.close();
     }
 
 }

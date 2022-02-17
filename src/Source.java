@@ -1,4 +1,4 @@
-public enum DBSource {
+public enum Source {
     MYSQL(
             "com.mysql.jdbc.Driver",
             "jdbc:mysql://",
@@ -29,7 +29,7 @@ public enum DBSource {
     final private String Link;
     final private String ShowT;
 
-    DBSource(String DB_driver, String Path, String Link, String ShowT) {
+    Source(String DB_driver, String Path, String Link, String ShowT) {
         this.DB_driver = DB_driver;
         this.Path = Path;
         this.Link = Link;
