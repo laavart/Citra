@@ -1,4 +1,4 @@
 package Client;
 
-public record Comm() {
+public record Comm(String email, String mobile) {
 }

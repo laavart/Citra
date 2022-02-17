@@ -1,4 +1,4 @@
 import Client.*;
 
-public record Client(Token token, Comm comm, User user) {
+public record Client(User user, Token token, Comm comm, Address address) {
 }
