@@ -284,7 +284,13 @@ public class Database {
     }
 
     public void addNewUser(Client client) throws SQLException{
+        statement.executeUpdate(
+                ""
+        );
 
+        statement.executeUpdate(
+                ""
+        );
     }
 
     public void close() throws SQLException {
