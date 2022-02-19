@@ -284,13 +284,15 @@ public class Database {
     }
 
     public void addNewUser(Client client) throws SQLException{
-        statement.executeUpdate(
-                ""
-        );
+        if(checkForUser(client.user().username())){
+            statement.executeUpdate(
 
-        statement.executeUpdate(
-                ""
-        );
+            );
+
+            statement.executeUpdate(
+                    ""
+            );
+        }
     }
 
     public void close() throws SQLException {
