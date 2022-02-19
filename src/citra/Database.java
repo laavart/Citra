@@ -197,7 +197,7 @@ public class Database {
     public boolean validateUser(String user, String token) throws SQLException{
         if(checkForUser(user)) {
             ResultSet resultSet = statement.executeQuery(
-                    "select Password " +
+                    "select token " +
                             "from token_master " +
                             "where uID = any(" +
                                 "select uID from user_master where User = '"+user+"'" +
@@ -211,7 +211,7 @@ public class Database {
     public boolean checkCode(String user, String code) throws SQLException{
         if(checkForUser(user)) {
             ResultSet resultSet = statement.executeQuery(
-                    "select SecurityCode " +
+                    "select code " +
                             "from token_master " +
                             "where uID = any(" +
                             "select uID from user_master where User = '"+user+"'" +
