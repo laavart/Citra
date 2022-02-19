@@ -222,7 +222,7 @@ public class Database {
             return;
         }
 
-        if(Pattern.compile("^(?=.{7,150})[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches()){
+        if(Pattern.compile("^[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches()){
             System.out.println("Invalid E-mail ID");
             return;
         }
