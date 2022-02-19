@@ -212,7 +212,7 @@ public class Database {
 
     public void addNewUser(Client client){
 
-        if(Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.token().token()).matches()){
+        if(!Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.token().token()).matches()){
             System.out.println("Password not valid");
             return;
         }
@@ -222,7 +222,7 @@ public class Database {
             return;
         }
 
-        if(Pattern.compile("^[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches()){
+        if(!Pattern.compile("^(?=.{7,150})[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches()){
             System.out.println("Invalid E-mail ID");
             return;
         }
