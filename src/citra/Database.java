@@ -1,7 +1,10 @@
+package citra;
+
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
-import Exception.*;
+import citra.exception.*;
 
 public class Database {
 
@@ -36,7 +39,7 @@ public class Database {
             db.statement.executeUpdate(
                     "create table user_address_code_country (" +
                             "cID int primary key," +
-                            "Country varchar(40)" +
+                            "Country varchar(100)" +
                             ");"
             );
         }
@@ -45,7 +48,7 @@ public class Database {
             db.statement.executeUpdate(
                     "create table user_address_code_state (" +
                             "sID int primary key," +
-                            "State varchar(40), " +
+                            "State varchar(100), " +
                             "Country int, " +
                             "foreign key (Country) references user_address_code_country(cID)" +
                             ");"
@@ -56,7 +59,7 @@ public class Database {
             db.statement.executeUpdate(
                     "create table user_address_code_postal (" +
                             "pID int primary key," +
-                            "City varchar(40)," +
+                            "City varchar(100)," +
                             "State int, " +
                             "foreign key (State) references user_address_code_state(sID)" +
                             ");"
@@ -67,8 +70,8 @@ public class Database {
             db.statement.executeUpdate(
                     "create table user_address (" +
                             "aID int primary key, " +
-                            "AddressLine1 varchar(40), " +
-                            "AddressLine2 varchar(40), " +
+                            "AddressLine1 varchar(100), " +
+                            "AddressLine2 varchar(100), " +
                             "PostalCode int, " +
                             "CountryCode int, " +
                             "foreign key (PostalCode) references user_address_code_postal(pID), " +
@@ -82,7 +85,7 @@ public class Database {
                     "create table user_master (" +
                             "uID int primary key, " +
                             "User varchar(128) unique, " +
-                            "Name varchar(35), " +
+                            "Name varchar(100), " +
                             "DOB date, " +
                             "Address int, " +
                             "foreign key (Address) references user_address(aID)" +
@@ -104,7 +107,7 @@ public class Database {
             db.statement.executeUpdate(
                     "create table comm_master (" +
                             "uID int primary key, " +
-                            "Email varchar(40) unique, " +
+                            "Email varchar(150) unique, " +
                             "Mobile varchar(10) unique" +
                             ");"
             );
@@ -208,7 +211,7 @@ public class Database {
     public boolean checkCode(String user, String code) throws SQLException{
         if(checkForUser(user)) {
             ResultSet resultSet = statement.executeQuery(
-                    "select Code " +
+                    "select SecurityCode " +
                             "from token_master " +
                             "where uID = any(" +
                             "select uID from user_master where User = '"+user+"'" +
@@ -219,16 +222,53 @@ public class Database {
         return false;
     }
 
-    public void addNewUser(Client client) throws SQLException{
-        if(!checkForUser(client.user().username())){
-            ResultSet resultSet = statement.executeQuery("select max(uid) from  ");
-            statement.executeUpdate(
-                    ""
-            );
+    public void addNewUser(Client client){
 
-            statement.executeUpdate(
-                    ""
-            );
+        if(Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.token().token()).matches()){
+            System.out.println("Password not valid");
+            return;
+        }
+
+        if(client.token().code().length() != 7){
+            System.out.println("Security Code must exactly be of 7 digits");
+            return;
+        }
+
+        if(Pattern.compile("^(?=.{7,150})[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches()){
+            System.out.println("Invalid E-mail ID");
+            return;
+        }
+
+        if(client.comm().mobile().length() != 10){
+            System.out.println("Invalid Mobile Number");
+            return;
+        }
+
+        if(client.address().postal().length() != 6){
+            System.out.println("Pin-code is of 6 digits");
+            return;
+        }
+
+
+
+        try{
+            if (!checkForUser(client.user().username())) {
+                int id=0;
+                ResultSet resultSet = statement.executeQuery("select max(uid)+1 from user_master;");
+                if (resultSet.next()) {
+                    id = resultSet.getInt(1);
+                }
+
+                statement.executeUpdate(
+                        ""
+                );
+
+                statement.executeUpdate(
+                        ""
+                );
+            }
+        } catch (SQLException e) {
+            System.out.println("Task Failed!");
         }
     }
 
