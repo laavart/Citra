@@ -57,6 +57,7 @@ public class Database {
                                     ");"
                     );
                 }
+
                 if(!db.searchTable("comm_master")){
                     db.statement.executeUpdate(
                             "create table comm_master (" +
@@ -284,9 +285,10 @@ public class Database {
     }
 
     public void addNewUser(Client client) throws SQLException{
-        if(checkForUser(client.user().username())){
+        if(!checkForUser(client.user().username())){
+            ResultSet resultSet = statement.executeQuery("select max(uid) from ");
             statement.executeUpdate(
-
+                    ""
             );
 
             statement.executeUpdate(

@@ -1,6 +1,6 @@
 public enum Source {
     MYSQL(
-            "com.mysql.jdbc.Driver",
+            "com.mysql.cj.jdbc.Driver",
             "jdbc:mysql://",
             "/",
             "show tables;"
