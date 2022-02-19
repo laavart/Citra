@@ -10,8 +10,6 @@ import citra.exception.*;
 public class Database {
 
     private Source source;
-    private String hostname;
-    private String port;
     private String database;
 
     private Connection connection = null;
@@ -31,7 +29,6 @@ public class Database {
 
     private Database(){
         System.out.println("Connection Started !");
-        this.port = "";
     }
 
     private static void initialize(Database db) throws SQLException {
@@ -70,13 +67,11 @@ public class Database {
         if(!db.searchTable("user_address")){
             db.statement.executeUpdate(
                     "create table user_address (" +
-                            "aID int primary key, " +
+                            "uID int primary key, " +
                             "AddressLine1 varchar(100), " +
                             "AddressLine2 varchar(100), " +
                             "PostalCode int, " +
-                            "CountryCode int, " +
-                            "foreign key (PostalCode) references user_address_code_postal(pID), " +
-                            "foreign key (CountryCode) references user_address_code_country(cID)" +
+                            "foreign key (PostalCode) references user_address_code_postal(pID) " +
                             ");"
             );
         }
@@ -87,9 +82,7 @@ public class Database {
                             "uID int primary key, " +
                             "User varchar(128) unique, " +
                             "Name varchar(100), " +
-                            "DOB date, " +
-                            "Address int, " +
-                            "foreign key (Address) references user_address(aID)" +
+                            "DOB date" +
                             ");"
             );
         }
@@ -124,8 +117,6 @@ public class Database {
                 Class.forName(source.getDriver());
                 Database db = new Database();
                 db.source = source;
-                db.hostname = hostname;
-                db.port = port;
                 db.database = database;
 
                 db.connection = DriverManager.getConnection(source.getPath(hostname, port, database), user, token);
@@ -153,7 +144,6 @@ public class Database {
                 Class.forName(source.getDriver());
                 Database db = new Database();
                 db.source = source;
-                db.hostname = hostname;
                 db.database = database;
 
                 db.connection = DriverManager.getConnection(source.getPath(hostname, database), user, token);
@@ -173,17 +163,15 @@ public class Database {
     }
 
     public boolean searchTable(String name) throws SQLException {
-        {
-            ResultSet resultSet =
-                    CheckByOwner.contains(source)
-                            ? statement.executeQuery(source.getTables(database))
-                            : statement.executeQuery(source.getTables()) ;
-            while (resultSet.next()) {
-                if (resultSet.getString(1).equals(name))
-                    return true;
-            }
-            return false;
+        ResultSet resultSet =
+                CheckByOwner.contains(source)
+                        ? statement.executeQuery(source.getTables(database))
+                        : statement.executeQuery(source.getTables()) ;
+        while (resultSet.next()) {
+            if (resultSet.getString(1).equals(name))
+                return true;
         }
+        return false;
     }
 
     public boolean checkForUser(String user) throws SQLException {
@@ -256,7 +244,7 @@ public class Database {
                 id = resultSet.next() ? resultSet.getInt(1) : 1;
 
                 statement.executeUpdate(
-                        "insert into token_master (" +
+                        "insert into token_master values (" +
                                 id + "," +
                                 "'" + client.token().token() + "'," +
                                 "'" + client.token().code() + "'" +
@@ -264,7 +252,7 @@ public class Database {
                 );
 
                 statement.executeUpdate(
-                        "insert into comm_master (" +
+                        "insert into comm_master values (" +
                                 id + "," +
                                 "'" + client.comm().email() + "'," +
                                 "'" + client.comm().mobile() + "'" +
@@ -272,13 +260,22 @@ public class Database {
                 );
 
                 statement.executeUpdate(
-                        "insert into token_master (" +
+                        "insert into user_master values (" +
                                 id + "," +
-                                "'" + client.token().token() + "'," +
-                                "'" + client.token().code() + "'" +
+                                "'" + client.user().username() + "'," +
+                                "'" + client.user().dob() + "'," +
+                                getPostalCode(client.address()) +
                                 ");"
                 );
 
+                statement.executeUpdate(
+                        "insert into user_address values (" +
+                                id + "," +
+                                "'" + client.address().address1() + "'," +
+                                "'" + client.address().address2() + "'," +
+                                getPostalCode(client.address()) +
+                                ");"
+                );
             }
         }
         catch (SQLException e) {
@@ -286,16 +283,61 @@ public class Database {
         }
     }
 
-    private void setCountryCode(Address address) throws SQLException {
+    private int getCountryCode(Address address) throws SQLException {
         ResultSet resultSet = statement.executeQuery("select cID from user_address_code_country where Country = '"+address.country()+"';");
         if(!resultSet.next()){
             resultSet = statement.executeQuery("select max(cID)+1 from user_address_code_country;");
+            int cID = resultSet.next() ? resultSet.getInt(1) : 1;
             statement.executeUpdate(
-                    "insert into user_address_code_country (" +
-                            (resultSet.next() ? resultSet.getInt(1) : 1) + "," +
+                    "insert into user_address_code_country values (" +
+                            cID + "," +
                             "'" + address.country() + "'" +
                             ");"
             );
+            return cID;
+        }
+        else{
+            return resultSet.getInt(1);
+        }
+    }
+
+    private int getStateCode(Address address) throws SQLException {
+        int cID = getCountryCode(address);
+        ResultSet resultSet = statement.executeQuery("select sID from user_address_code_state where State = '"+address.state()+"';");
+        if(!resultSet.next()){
+            resultSet = statement.executeQuery("select max(sID)+1 from user_address_code_state;");
+            int sID = resultSet.next() ? resultSet.getInt(1) : 1;
+            statement.executeUpdate(
+                    "insert into user_address_code_state values (" +
+                            sID + "," +
+                            "'" + address.state() + "'," +
+                            cID +
+                            ");"
+            );
+            return sID;
+        }
+        else{
+            return resultSet.getInt(1);
+        }
+    }
+
+    private int getPostalCode(Address address) throws SQLException {
+        int sID = getStateCode(address);
+        ResultSet resultSet = statement.executeQuery("select pID from user_address_code_postal where City = '"+address.city()+"';");
+        if(!resultSet.next()){
+            resultSet = statement.executeQuery("select max(pID)+1 from user_address_code_postal;");
+            int pID = resultSet.next() ? resultSet.getInt(1) : 1;
+            statement.executeUpdate(
+                    "insert into user_address_code_postal values (" +
+                            pID + "," +
+                            "'" + address.city() + "'," +
+                            sID +
+                            ");"
+            );
+            return pID;
+        }
+        else{
+            return resultSet.getInt(1);
         }
     }
 
