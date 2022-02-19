@@ -4,6 +4,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
+import citra.client.Address;
 import citra.exception.*;
 
 public class Database {
@@ -16,13 +17,13 @@ public class Database {
     private Connection connection = null;
     private Statement statement = null;
 
-    private static ArrayList<Source> CheckForPort;
+    private static final ArrayList<Source> CheckForPort;
     static {
         CheckForPort = new ArrayList<>(1);
         CheckForPort.add(Source.MYSQL);
     }
 
-    private static ArrayList<Source> CheckByOwner;
+    private static final ArrayList<Source> CheckByOwner;
     static {
         CheckByOwner = new ArrayList<>(1);
         CheckByOwner.add(Source.ORACLE);
@@ -190,8 +191,7 @@ public class Database {
                 "select * " +
                         "from user_master " +
                         "where User = '"+user+"';");
-        while(resultSet.next()) return true;
-        return false;
+        return resultSet.next();
     }
 
     public boolean validateUser(String user, String token) throws SQLException{
@@ -203,7 +203,7 @@ public class Database {
                                 "select uID from user_master where User = '"+user+"'" +
                             ");"
             );
-            while (resultSet.next() && resultSet.getString("Token").equals(token)) return true;
+            return resultSet.next() && resultSet.getString("Token").equals(token);
         }
         return false;
     }
@@ -217,7 +217,7 @@ public class Database {
                             "select uID from user_master where User = '"+user+"'" +
                             ");"
             );
-            while (resultSet.next() && resultSet.getString("Code").equals(code)) return true;
+            return resultSet.next() && resultSet.getString("Code").equals(code);
         }
         return false;
     }
@@ -249,26 +249,53 @@ public class Database {
             return;
         }
 
-
-
         try{
             if (!checkForUser(client.user().username())) {
-                int id=0;
+                int id;
                 ResultSet resultSet = statement.executeQuery("select max(uid)+1 from user_master;");
-                if (resultSet.next()) {
-                    id = resultSet.getInt(1);
-                }
+                id = resultSet.next() ? resultSet.getInt(1) : 1;
 
                 statement.executeUpdate(
-                        ""
+                        "insert into token_master (" +
+                                id + "," +
+                                "'" + client.token().token() + "'," +
+                                "'" + client.token().code() + "'" +
+                                ");"
                 );
 
                 statement.executeUpdate(
-                        ""
+                        "insert into comm_master (" +
+                                id + "," +
+                                "'" + client.comm().email() + "'," +
+                                "'" + client.comm().mobile() + "'" +
+                                ");"
                 );
+
+                statement.executeUpdate(
+                        "insert into token_master (" +
+                                id + "," +
+                                "'" + client.token().token() + "'," +
+                                "'" + client.token().code() + "'" +
+                                ");"
+                );
+
             }
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             System.out.println("Task Failed!");
+        }
+    }
+
+    private void setCountryCode(Address address) throws SQLException {
+        ResultSet resultSet = statement.executeQuery("select cID from user_address_code_country where Country = '"+address.country()+"';");
+        if(!resultSet.next()){
+            resultSet = statement.executeQuery("select max(cID)+1 from user_address_code_country;");
+            statement.executeUpdate(
+                    "insert into user_address_code_country (" +
+                            (resultSet.next() ? resultSet.getInt(1) : 1) + "," +
+                            "'" + address.country() + "'" +
+                            ");"
+            );
         }
     }
 
