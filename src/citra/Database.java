@@ -34,6 +34,18 @@ public class Database {
         System.out.println("Connection Started !");
     }
 
+    private boolean searchTable(String name) throws SQLException {
+        ResultSet resultSet =
+                CheckByOwner.contains(source)
+                        ? statement.executeQuery(source.getTables(database))
+                        : statement.executeQuery(source.getTables()) ;
+
+        while(resultSet.next())
+            if( resultSet.getString(1).equals(name) ) return true;
+
+        return false;
+    }
+
     private static void initialize(Database db) throws SQLException {
         if(!db.searchTable("user_address_code_country")){
             db.statement.executeUpdate(
@@ -160,43 +172,11 @@ public class Database {
         }
     }
 
-    public boolean searchTable(String name) throws SQLException {
-        ResultSet resultSet =
-                CheckByOwner.contains(source)
-                        ? statement.executeQuery(source.getTables(database))
-                        : statement.executeQuery(source.getTables()) ;
-
-        while(resultSet.next())
-            if( resultSet.getString(1).equals(name) ) return true;
-
-        return false;
-    }
-
     private boolean checkForUser(String user) throws SQLException {
         ResultSet resultSet = statement.executeQuery(
                 "select * from user_master where Username = '"+user+"';"
         );
         return resultSet.next();
-    }
-
-    public boolean validateUser(String username, String token) throws SQLException{
-        if(checkForUser(username)){
-            ResultSet resultSet = statement.executeQuery(
-                    "select token from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
-            );
-            return resultSet.next() && resultSet.getString("Token").equals(token);
-        }
-        return false;
-    }
-
-    private boolean checkCode(String username, String code) throws SQLException{
-        if(checkForUser(username)) {
-            ResultSet resultSet = statement.executeQuery(
-                    "select code from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
-            );
-            return resultSet.next() && resultSet.getString("Code").equals(code);
-        }
-        return false;
     }
 
     private boolean checkForEmail(String email) throws SQLException {
@@ -213,7 +193,27 @@ public class Database {
         return resultSet.next();
     }
 
-    public void addNewUser(Client client){
+    private boolean validateWithCode(String username, String code) throws SQLException{
+        if(checkForUser(username)) {
+            ResultSet resultSet = statement.executeQuery(
+                    "select code from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
+            );
+            return resultSet.next() && resultSet.getString("Code").equals(code);
+        }
+        return false;
+    }
+
+    public boolean validateUser(String username, String token) throws SQLException{
+        if(checkForUser(username)){
+            ResultSet resultSet = statement.executeQuery(
+                    "select token from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
+            );
+            return resultSet.next() && resultSet.getString("Token").equals(token);
+        }
+        return false;
+    }
+
+    public boolean addNewUser(Client client){
         try{
             if( checkForUser(client.user().username()) )
                 System.out.println("User already Exist!");
@@ -275,6 +275,7 @@ public class Database {
                 statement.executeUpdate("commit ;");
 
                 System.out.println("User Registered!");
+                return true;
             }
 
         } catch (SQLException e) {
@@ -286,6 +287,31 @@ public class Database {
                 System.out.println("Error!");
             }
         }
+        return false;
+    }
+
+    public boolean changePassword(String username, String code, String newToken){
+        try {
+            if(validateWithCode(username,code)) {
+                if(Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(newToken).matches()){
+                    statement.executeUpdate(
+                            "update token_master " +
+                                    "set Token = " +
+                                    "'" + newToken + "' " +
+                                    "where code = " +
+                                    "'" + code + "'" +
+                                    ";"
+                    );
+                    return true;
+                }
+                else System.out.println("Password not valid!");
+            }
+            else System.out.println("Security Code Incorrect!");
+        }
+        catch (SQLException e) {
+            System.out.println("Couldn't update password!");
+        }
+        return false;
     }
 
     private int getCountryCode(Address address) throws SQLException {
@@ -381,29 +407,7 @@ public class Database {
         return resultSet.next() ? resultSet.getString(1) : "";
     }
 
-    public void changePassword(String username, String code, String newToken){
-        try {
-            if(checkCode(username,code)) {
-                if(Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(newToken).matches()){
-                    statement.executeUpdate(
-                            "update token_master " +
-                                    "set Token = " +
-                                    "'" + newToken + "' " +
-                                    "where code = " +
-                                    "'" + code + "'" +
-                                    ";"
-                    );
-                }
-                else System.out.println("Password not valid!");
-            }
-            else System.out.println("Security Code Incorrect!");
-        }
-        catch (SQLException e) {
-            System.out.println("Couldn't update password!");
-        }
-    }
-
-    public void updateUserInfo(Client client, String token){
+    public boolean updateUserInfo(Client client, String token){
         try {
             if( !validateUser(client.user().username(), token) )
                 System.out.println("UnAuthorized Request Declined!");
@@ -454,6 +458,8 @@ public class Database {
                 statement.executeUpdate("commit ;");
 
                 System.out.println("User details updated!");
+
+                return true;
             }
 
         } catch (SQLException e) {
@@ -465,6 +471,7 @@ public class Database {
                 System.out.println("Error!");
             }
         }
+        return false;
     }
 
     public Client getUser(String username, String token){
@@ -506,9 +513,13 @@ public class Database {
         return null;
     }
 
-    public void executeUpdate(String query) throws SQLException {
+    public boolean executeUpdate(String query) throws SQLException {
         if(query.contains("modify") || query.contains("delete") ) System.out.println("Can't perform this action!");
-        else statement.executeUpdate(query);
+        else {
+            statement.executeUpdate(query);
+            return true;
+        }
+        return false;
     }
 
     public void close() {
