@@ -111,7 +111,7 @@ public class Database {
         db.statement.executeUpdate("set autocommit = 0;");
     }
 
-    public static Database connect(Source source , String hostname, String port, String database, String user, String token) throws DBInvalidException {
+    public static Database connect(Source source, String hostname, String port, String database, String user, String token) throws DBInvalidException {
         if(CheckForPort.contains(source)){
             throw new DBInvalidException();
         }
@@ -132,7 +132,6 @@ public class Database {
             }
             catch (ClassNotFoundException | SQLException e) {
                 System.out.println("Connection Failed !");
-                e.printStackTrace();
                 return null;
             }
         }
@@ -159,7 +158,6 @@ public class Database {
             }
             catch (ClassNotFoundException | SQLException e) {
                 System.out.println("Connection Failed !");
-                e.printStackTrace();
                 return null;
             }
         }
@@ -213,36 +211,58 @@ public class Database {
         return false;
     }
 
+    public boolean checkForEmail(String email) throws SQLException {
+        ResultSet resultSet = statement.executeQuery(
+                "select * " +
+                        "from comm_master " +
+                        "where Email = '"+email+"';");
+        return resultSet.next();
+    }
+
+    public boolean checkForMobile(String mobile) throws SQLException {
+        ResultSet resultSet = statement.executeQuery(
+                "select * " +
+                        "from comm_master " +
+                        "where Mobile = '"+mobile+"';");
+        return resultSet.next();
+    }
+
     public void addNewUser(Client client){
 
-        if(!Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.token().token()).matches()){
-            System.out.println("Password not valid");
-            return;
-        }
-
-        if(client.token().code().length() != 7){
-            System.out.println("Security Code must exactly be of 7 digits");
-            return;
-        }
-
-        if(!Pattern.compile("^(?=.{7,150})[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches()){
-            System.out.println("Invalid E-mail ID");
-            return;
-        }
-
-        if(client.comm().mobile().length() != 10){
-            System.out.println("Invalid Mobile Number");
-            return;
-        }
-
-        if(client.address().postal().length() != 6){
-            System.out.println("Pin-code is of 6 digits");
-            return;
-        }
-
         try{
-            if (!checkForUser(client.user().username())) {
-
+            if( checkForUser(client.user().username()) ){
+                System.out.println("User already Exist!");
+                return;
+            }
+            else if( checkForEmail(client.comm().email()) ){
+                System.out.println("Email already Exist!");
+                return;
+            }
+            else if( checkForMobile(client.comm().mobile()) ){
+                System.out.println("Mobile Number already Exist!");
+                return;
+            }
+            else if(!Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.token().token()).matches()){
+                System.out.println("Password not valid!");
+                return;
+            }
+            else if(client.token().code().length() != 7){
+                System.out.println("Security Code must exactly be of 7 digits!");
+                return;
+            }
+            else if(!Pattern.compile("^(?=.{7,150})[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches()){
+                System.out.println("Invalid E-mail ID!");
+                return;
+            }
+            else if(client.comm().mobile().length() != 10){
+                System.out.println("Invalid Mobile Number!");
+                return;
+            }
+            else if(client.address().postal().length() != 6){
+                System.out.println("Pin-code is of 6 digits!");
+                return;
+            }
+            else{
                 statement.executeUpdate("start transaction ;");
 
                 int id;
@@ -355,6 +375,28 @@ public class Database {
         }
         else{
             return resultSet.getInt(1);
+        }
+    }
+
+    public void changePassword(String user, String code, String newToken){
+        try {
+            if(checkCode(user,code)) {
+                if(Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(newToken).matches()){
+                    statement.executeUpdate(
+                            "update token_master " +
+                                    "set Token = " +
+                                    "'" + newToken + "' " +
+                                    "where code = " +
+                                    "'" + code + "'" +
+                                    ";"
+                    );
+                }
+                else System.out.println("Password not valid!");
+            }
+            else System.out.println("Security Code Incorrect!");
+        }
+        catch (SQLException e) {
+            System.out.println("Couldn't update password!");
         }
     }
 
