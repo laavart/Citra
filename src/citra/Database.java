@@ -121,6 +121,22 @@ public class Database {
             );
         }
 
+        if(!db.searchTable("reuse_master")){
+            db.statement.executeUpdate(
+                    "create table reuse_master (" +
+                            "rID int primary key" +
+                            ");"
+            );
+        }
+
+        if(!db.searchTable("revoke_master")){
+            db.statement.executeUpdate(
+                    "create table revoke_master (" +
+                            "rvID int primary key" +
+                            ");"
+            );
+        }
+
         db.statement.executeUpdate("set autocommit = 0;");
     }
 
@@ -193,6 +209,16 @@ public class Database {
         return resultSet.next();
     }
 
+    private boolean validateWithToken(String username, String token) throws SQLException{
+        if(checkForUser(username)){
+            ResultSet resultSet = statement.executeQuery(
+                    "select token from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
+            );
+            return resultSet.next() && resultSet.getString("Token").equals(token);
+        }
+        return false;
+    }
+
     private boolean validateWithCode(String username, String code) throws SQLException{
         if(checkForUser(username)) {
             ResultSet resultSet = statement.executeQuery(
@@ -203,115 +229,11 @@ public class Database {
         return false;
     }
 
-    public boolean validateUser(String username, String token) throws SQLException{
-        if(checkForUser(username)){
-            ResultSet resultSet = statement.executeQuery(
-                    "select token from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
-            );
-            return resultSet.next() && resultSet.getString("Token").equals(token);
-        }
-        return false;
-    }
-
-    public boolean addNewUser(Client client){
-        try{
-            if( checkForUser(client.user().username()) )
-                System.out.println("User already Exist!");
-            else if( checkForEmail(client.comm().email()) )
-                System.out.println("Email already Exist!");
-            else if( checkForMobile(client.comm().mobile()) )
-                System.out.println("Mobile Number already Exist!");
-            else if(!Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.security().token()).matches())
-                System.out.println("Password not valid!");
-            else if(client.security().code().length() != 7)
-                System.out.println("Security Code must exactly be of 7 digits!");
-            else if(!Pattern.compile("^(?=.{7,150})[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches())
-                System.out.println("Invalid E-mail ID!");
-            else if(client.comm().mobile().length() != 10)
-                System.out.println("Invalid Mobile Number!");
-            else if(client.address().postal().length() != 6)
-                System.out.println("Pin-code is of 6 digits!");
-            else{
-                statement.executeUpdate("start transaction ;");
-
-                int id;
-                ResultSet resultSet = statement.executeQuery("select max(uid)+1 from user_master;");
-                id = resultSet.next() ? resultSet.getInt(1) : 1;
-
-                statement.executeUpdate(
-                        "insert into token_master values (" +
-                                id + "," +
-                                "'" + client.security().token() + "'," +
-                                "'" + client.security().code() + "'" +
-                                ");"
-                );
-
-                statement.executeUpdate(
-                        "insert into comm_master values (" +
-                                id + "," +
-                                "'" + client.comm().email() + "'," +
-                                "'" + client.comm().mobile() + "'" +
-                                ");"
-                );
-
-                statement.executeUpdate(
-                        "insert into user_master values (" +
-                                id + "," +
-                                "'" + client.user().username() + "'," +
-                                "'" + client.user().name() + "'," +
-                                "'" + client.user().dob().format(DateTimeFormatter.ISO_LOCAL_DATE) + "'" +
-                                ");"
-                );
-
-                statement.executeUpdate(
-                        "insert into user_address values (" +
-                                id + "," +
-                                "'" + client.address().address1() + "'," +
-                                "'" + client.address().address2() + "'," +
-                                getPostalCode(client.address()) +
-                                ");"
-                );
-
-                statement.executeUpdate("commit ;");
-
-                System.out.println("User Registered!");
-                return true;
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Registration Failed!");
-
-            try {
-                statement.executeUpdate("rollback;");
-            } catch (SQLException ex) {
-                System.out.println("Error!");
-            }
-        }
-        return false;
-    }
-
-    public boolean changePassword(String username, String code, String newToken){
-        try {
-            if(validateWithCode(username,code)) {
-                if(Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(newToken).matches()){
-                    statement.executeUpdate(
-                            "update token_master " +
-                                    "set Token = " +
-                                    "'" + newToken + "' " +
-                                    "where code = " +
-                                    "'" + code + "'" +
-                                    ";"
-                    );
-                    return true;
-                }
-                else System.out.println("Password not valid!");
-            }
-            else System.out.println("Security Code Incorrect!");
-        }
-        catch (SQLException e) {
-            System.out.println("Couldn't update password!");
-        }
-        return false;
+    private String getCountry(int cID) throws SQLException {
+        ResultSet resultSet = statement.executeQuery(
+                "select Country from user_address_code_country where cID = "+cID+";"
+        );
+        return resultSet.next() ? resultSet.getString(1) : "";
     }
 
     private int getCountryCode(Address address) throws SQLException {
@@ -361,6 +283,13 @@ public class Database {
         } else return resultSet.getInt(1);
     }
 
+    private String getState(int sID) throws SQLException {
+        ResultSet resultSet = statement.executeQuery(
+                "select State from user_address_code_state where sID = "+sID+";"
+        );
+        return resultSet.next() ? resultSet.getString(1) : "";
+    }
+
     private int getPostalCode(Address address) throws SQLException {
         int sID = getStateCode(address);
 
@@ -386,20 +315,6 @@ public class Database {
         } else return resultSet.getInt(1);
     }
 
-    private String getCountry(int cID) throws SQLException {
-        ResultSet resultSet = statement.executeQuery(
-                "select Country from user_address_code_country where cID = "+cID+";"
-        );
-        return resultSet.next() ? resultSet.getString(1) : "";
-    }
-
-    private String getState(int sID) throws SQLException {
-        ResultSet resultSet = statement.executeQuery(
-                "select State from user_address_code_state where sID = "+sID+";"
-        );
-        return resultSet.next() ? resultSet.getString(1) : "";
-    }
-
     private String getCity(int pID) throws SQLException {
         ResultSet resultSet = statement.executeQuery(
                 "select City from user_address_code_postal where pID = "+pID+";"
@@ -407,9 +322,217 @@ public class Database {
         return resultSet.next() ? resultSet.getString(1) : "";
     }
 
+    private Client getUser(String username, String token){
+        try {
+            if(validateWithToken(username, token)){
+                ResultSet resultSet = statement.executeQuery(
+                        "select Name, DOB, Email, Mobile, AddressLine1, AddressLine2, PostalCode, City, State, Country " +
+                                "from user_address, user_master, comm_master, user_address_code_postal, user_address_code_state, user_address_code_country " +
+                                "where user_address.uID = user_master.uID " +
+                                "and user_master.uID = comm_master.uID " +
+                                "and user_address.PostalCode = user_address_code_postal.pID " +
+                                "and user_address_code_postal.State = user_address_code_state.sID " +
+                                "and user_address_code_state.Country = user_address_code_country.cID " +
+                                "and Username = '" + username + "'" +
+                                ";"
+                );
+
+                if (resultSet.next()) {
+                    User user = new User(resultSet.getString(1), resultSet.getDate(2).toLocalDate());
+                    Comm comm = new Comm(resultSet.getString(3), resultSet.getString(4));
+                    Address address = new Address(resultSet.getString(5), resultSet.getString(6), resultSet.getString(7), resultSet.getString(8), resultSet.getString(9), resultSet.getString(10));
+
+                    return new Client(user, comm, address);
+
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error in Fetching Data!");
+        }
+
+        System.out.println("User not found!");
+        return null;
+    }
+
+    public Client validateUser(String username, String token){
+        try {
+            ResultSet resultSet = statement.executeQuery(
+                    "select uID from user_master where Username = '"+username+"';"
+            );
+
+            if(resultSet.first()){
+                resultSet = statement.executeQuery(
+                        "select rvID from revoke_master where rvID = "+resultSet.getInt(1)+";"
+                );
+
+                if(!resultSet.next()) return getUser(username, token);
+            }
+        } catch (SQLException e) {
+            System.out.println("Validation Error!");
+        }
+
+        System.out.println("User not found!");
+        return null;
+    }
+
+    public boolean addNewUser(Client client){
+        try{
+            if( checkForUser(client.user().username()) )
+                System.out.println("User already Exist!");
+            else if( checkForEmail(client.comm().email()) )
+                System.out.println("Email already Exist!");
+            else if( checkForMobile(client.comm().mobile()) )
+                System.out.println("Mobile Number already Exist!");
+            else if(!Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.security().token()).matches())
+                System.out.println("Password not valid!");
+            else if(client.security().code().length() != 7)
+                System.out.println("Security Code must exactly be of 7 digits!");
+            else if(!Pattern.compile("^(?=.{7,150})[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches())
+                System.out.println("Invalid E-mail ID!");
+            else if(client.comm().mobile().length() != 10)
+                System.out.println("Invalid Mobile Number!");
+            else if(client.address().postal().length() != 6)
+                System.out.println("Pin-code is of 6 digits!");
+            else{
+                statement.executeUpdate("start transaction ;");
+
+                int id;
+                ResultSet resultSet = statement.executeQuery("select min(rID) from reuse_master;");
+                if(resultSet.first()) id = resultSet.getInt(1);
+                else{
+                    resultSet = statement.executeQuery("select max(uid)+1 from user_master;");
+                    id = resultSet.next() ? resultSet.getInt(1) : 1;
+                }
+
+                statement.executeUpdate(
+                        "insert into token_master values (" +
+                                id + "," +
+                                "'" + client.security().token() + "'," +
+                                "'" + client.security().code() + "'" +
+                                ");"
+                );
+
+                statement.executeUpdate(
+                        "insert into comm_master values (" +
+                                id + "," +
+                                "'" + client.comm().email() + "'," +
+                                "'" + client.comm().mobile() + "'" +
+                                ");"
+                );
+
+                statement.executeUpdate(
+                        "insert into user_master values (" +
+                                id + "," +
+                                "'" + client.user().username() + "'," +
+                                "'" + client.user().name() + "'," +
+                                "'" + client.user().dob().format(DateTimeFormatter.ISO_LOCAL_DATE) + "'" +
+                                ");"
+                );
+
+                statement.executeUpdate(
+                        "insert into user_address values (" +
+                                id + "," +
+                                "'" + client.address().address1() + "'," +
+                                "'" + client.address().address2() + "'," +
+                                getPostalCode(client.address()) +
+                                ");"
+                );
+
+                statement.executeUpdate("commit ;");
+
+                System.out.println("User Registered!");
+                return true;
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Registration Failed!");
+        }
+
+        try {
+            statement.executeUpdate("rollback;");
+        } catch (SQLException ex) {
+            System.out.println("Rollback Error!");
+        }
+        return false;
+    }
+
+    public boolean changePassword(String username, String code, String newToken){
+        try {
+            if(validateWithCode(username,code)) {
+                if(Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(newToken).matches()){
+                    statement.executeUpdate(
+                            "update token_master " +
+                                    "set Token = " +
+                                    "'" + newToken + "' " +
+                                    "where code = " +
+                                    "'" + code + "'" +
+                                    ";"
+                    );
+                    return true;
+                }
+                else System.out.println("Password not valid!");
+            }
+            else System.out.println("Security Code Incorrect!");
+        }
+        catch (SQLException e) {
+            System.out.println("Couldn't update password!");
+        }
+        return false;
+    }
+
+    public boolean deleteUser(String username, String code){
+        try {
+            if(validateWithCode(username, code)){
+                ResultSet resultSet = statement.executeQuery(
+                        "select uID from user_master where Username = '"+username+"';"
+                );
+                if(resultSet.first()){
+                    int id = resultSet.getInt(1);
+
+                    statement.executeUpdate("start transaction ;");
+
+                    statement.executeUpdate(
+                            "delete from user_master where uID = "+id+";"
+                    );
+
+                    statement.executeUpdate(
+                            "delete from token_master where uID = "+id+";"
+                    );
+
+                    statement.executeUpdate(
+                            "delete from comm_master where uID = "+id+";"
+                    );
+
+                    statement.executeUpdate(
+                            "delete from user_address where uID = "+id+";"
+                    );
+
+                    statement.executeUpdate(
+                            "insert into reuse_master values("+id+");"
+                    );
+
+                    statement.executeUpdate("commit ;");
+
+                    System.out.println("User Record Deleted!");
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Deletion Failed!");
+        }
+
+        try {
+            statement.executeUpdate("rollback ;");
+        } catch (SQLException e) {
+            System.out.println("Rollback Error!");
+        }
+        return false;
+    }
+
     public boolean updateUserInfo(Client client, String token){
         try {
-            if( !validateUser(client.user().username(), token) )
+            if( !validateWithToken(client.user().username(), token) )
                 System.out.println("UnAuthorized Request Declined!");
             else if (checkForEmail(client.comm().email()))
                 System.out.println("Email already Exist!");
@@ -474,37 +597,52 @@ public class Database {
         return false;
     }
 
-    public Client getUser(String username, String token){
+    public boolean revokeAccess(String username, String code){
         try {
-            if(validateUser(username, token)){
+            if(validateWithCode(username, code)) {
                 ResultSet resultSet = statement.executeQuery(
-                        "select Name, DOB, Email, Mobile, AddressLine1, AddressLine2, PostalCode, City, State, Country " +
-                                "from user_address, user_master, comm_master, user_address_code_postal, user_address_code_state, user_address_code_country " +
-                                "where user_address.uID = user_master.uID " +
-                                "and user_master.uID = comm_master.uID " +
-                                "and user_address.PostalCode = user_address_code_postal.pID " +
-                                "and user_address_code_postal.State = user_address_code_state.sID " +
-                                "and user_address_code_state.Country = user_address_code_country.cID " +
-                                "and Username = '" + username + "'" +
-                                ";"
+                        "select uID from user_master where Username = '" + username + "';"
                 );
 
-                if (resultSet.next()) {
-                    User user = new User(resultSet.getString(1), resultSet.getDate(2).toLocalDate());
-                    Comm comm = new Comm(resultSet.getString(3), resultSet.getString(4));
-                    Address address = new Address(resultSet.getString(5), resultSet.getString(6), resultSet.getString(7), resultSet.getString(8), resultSet.getString(9), resultSet.getString(10));
+                if (resultSet.first()) {
+                    statement.executeUpdate(
+                            "insert into revoke_master values (" + resultSet.getInt(1) + ");"
+                    );
 
-                    return new Client(user, comm, address);
-
+                    System.out.println("Access Revoked!");
+                    return true;
                 }
             }
 
         } catch (SQLException e) {
-            System.out.println("Error in Fetching Data!");
+            System.out.println("Revoke Error!");
         }
 
-        System.out.println("User not found!");
-        return null;
+        return false;
+    }
+
+    public boolean grantAccess(String username, String code){
+        try {
+            if(validateWithCode(username, code)) {
+                ResultSet resultSet = statement.executeQuery(
+                        "select uID from user_master where Username = '" + username + "';"
+                );
+
+                if (resultSet.first()) {
+                    statement.executeUpdate(
+                            "delete from revoke_master where rvID = " + resultSet.getInt(1) + ";"
+                    );
+
+                    System.out.println("Access Granted!");
+                    return true;
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Grant Error!");
+        }
+
+        return false;
     }
 
     public ResultSet executeQuery(String query) throws SQLException {
