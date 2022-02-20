@@ -188,11 +188,11 @@ public class Database {
         }
     }
 
-    private boolean checkForUser(String user) throws SQLException {
+    private int checkForUser(String user) throws SQLException {
         ResultSet resultSet = statement.executeQuery(
-                "select * from user_master where Username = '"+user+"';"
+                "select uID from user_master where Username = '"+user+"';"
         );
-        return resultSet.next();
+        return resultSet.next() ? resultSet.getInt(1) : -1;
     }
 
     private boolean checkForEmail(String email) throws SQLException {
@@ -210,7 +210,7 @@ public class Database {
     }
 
     private boolean validateWithToken(String username, String token) throws SQLException{
-        if(checkForUser(username)){
+        if(checkForUser(username) != -1){
             ResultSet resultSet = statement.executeQuery(
                     "select token from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
             );
@@ -220,20 +220,13 @@ public class Database {
     }
 
     private boolean validateWithCode(String username, String code) throws SQLException{
-        if(checkForUser(username)) {
+        if(checkForUser(username) != -1) {
             ResultSet resultSet = statement.executeQuery(
                     "select code from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
             );
             return resultSet.next() && resultSet.getString("Code").equals(code);
         }
         return false;
-    }
-
-    private String getCountry(int cID) throws SQLException {
-        ResultSet resultSet = statement.executeQuery(
-                "select Country from user_address_code_country where cID = "+cID+";"
-        );
-        return resultSet.next() ? resultSet.getString(1) : "";
     }
 
     private int getCountryCode(Address address) throws SQLException {
@@ -256,6 +249,13 @@ public class Database {
             return cID;
 
         } else return resultSet.getInt(1);
+    }
+
+    private String getCountry(int cID) throws SQLException {
+        ResultSet resultSet = statement.executeQuery(
+                "select Country from user_address_code_country where cID = "+cID+";"
+        );
+        return resultSet.next() ? resultSet.getString(1) : "";
     }
 
     private int getStateCode(Address address) throws SQLException {
@@ -357,13 +357,11 @@ public class Database {
 
     public Client validateUser(String username, String token){
         try {
-            ResultSet resultSet = statement.executeQuery(
-                    "select uID from user_master where Username = '"+username+"';"
-            );
+            int id = checkForUser(username);
 
-            if(resultSet.first()){
-                resultSet = statement.executeQuery(
-                        "select rvID from revoke_master where rvID = "+resultSet.getInt(1)+";"
+            if(id != -1){
+                ResultSet resultSet = statement.executeQuery(
+                        "select rvID from revoke_master where rvID = "+id+";"
                 );
 
                 if(!resultSet.next()) return getUser(username, token);
@@ -378,7 +376,7 @@ public class Database {
 
     public boolean addNewUser(Client client){
         try{
-            if( checkForUser(client.user().username()) )
+            if( checkForUser(client.user().username()) != -1 )
                 System.out.println("User already Exist!");
             else if( checkForEmail(client.comm().email()) )
                 System.out.println("Email already Exist!");
@@ -547,11 +545,7 @@ public class Database {
             else {
                 statement.executeUpdate("start transaction ;");
 
-                int id;
-                ResultSet resultSet = statement.executeQuery(
-                        "select uid from user_master where Username = '" +client.user().username() +"';"
-                );
-                id = resultSet.next() ? resultSet.getInt(1) : 0;
+                int id = checkForUser(client.user().username());
 
                 statement.executeUpdate(
                         "update comm_master set " +
@@ -600,13 +594,11 @@ public class Database {
     public boolean revokeAccess(String username, String code){
         try {
             if(validateWithCode(username, code)) {
-                ResultSet resultSet = statement.executeQuery(
-                        "select uID from user_master where Username = '" + username + "';"
-                );
+                int id = checkForUser(username);
 
-                if (resultSet.first()) {
+                if (id != -1) {
                     statement.executeUpdate(
-                            "insert into revoke_master values (" + resultSet.getInt(1) + ");"
+                            "insert into revoke_master values (" + id + ");"
                     );
 
                     System.out.println("Access Revoked!");
@@ -624,13 +616,11 @@ public class Database {
     public boolean grantAccess(String username, String code){
         try {
             if(validateWithCode(username, code)) {
-                ResultSet resultSet = statement.executeQuery(
-                        "select uID from user_master where Username = '" + username + "';"
-                );
+                int id = checkForUser(username);
 
-                if (resultSet.first()) {
+                if (id != -1) {
                     statement.executeUpdate(
-                            "delete from revoke_master where rvID = " + resultSet.getInt(1) + ";"
+                            "delete from revoke_master where rvID = " + id + ";"
                     );
 
                     System.out.println("Access Granted!");
