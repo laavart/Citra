@@ -82,7 +82,7 @@ public class Database {
             db.statement.executeUpdate(
                     "create table user_master (" +
                             "uID int primary key, " +
-                            "User varchar(128) unique, " +
+                            "Username varchar(128) unique, " +
                             "Name varchar(100), " +
                             "DOB date" +
                             ");"
@@ -174,7 +174,7 @@ public class Database {
 
     private boolean checkForUser(String user) throws SQLException {
         ResultSet resultSet = statement.executeQuery(
-                "select * from user_master where User = '"+user+"';"
+                "select * from user_master where Username = '"+user+"';"
         );
         return resultSet.next();
     }
@@ -182,7 +182,7 @@ public class Database {
     public boolean validateUser(String user, String token) throws SQLException{
         if(checkForUser(user)){
             ResultSet resultSet = statement.executeQuery(
-                    "select token from token_master where uID = any(select uID from user_master where User = '"+user+"');"
+                    "select token from token_master where uID = any(select uID from user_master where Username = '"+user+"');"
             );
             return resultSet.next() && resultSet.getString("Token").equals(token);
         }
@@ -192,7 +192,7 @@ public class Database {
     private boolean checkCode(String user, String code) throws SQLException{
         if(checkForUser(user)) {
             ResultSet resultSet = statement.executeQuery(
-                    "select code from token_master where uID = any(select uID from user_master where User = '"+user+"');"
+                    "select code from token_master where uID = any(select uID from user_master where Username = '"+user+"');"
             );
             return resultSet.next() && resultSet.getString("Code").equals(code);
         }
@@ -221,9 +221,9 @@ public class Database {
                 System.out.println("Email already Exist!");
             else if( checkForMobile(client.comm().mobile()) )
                 System.out.println("Mobile Number already Exist!");
-            else if(!Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.token().token()).matches())
+            else if(!Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(client.security().token()).matches())
                 System.out.println("Password not valid!");
-            else if(client.token().code().length() != 7)
+            else if(client.security().code().length() != 7)
                 System.out.println("Security Code must exactly be of 7 digits!");
             else if(!Pattern.compile("^(?=.{7,150})[a-zA-Z0-9+._-]+@[a-zA-Z0-9.]+$").matcher(client.comm().email()).matches())
                 System.out.println("Invalid E-mail ID!");
@@ -241,8 +241,8 @@ public class Database {
                 statement.executeUpdate(
                         "insert into token_master values (" +
                                 id + "," +
-                                "'" + client.token().token() + "'," +
-                                "'" + client.token().code() + "'" +
+                                "'" + client.security().token() + "'," +
+                                "'" + client.security().code() + "'" +
                                 ");"
                 );
 
@@ -422,7 +422,7 @@ public class Database {
 
                 int id;
                 ResultSet resultSet = statement.executeQuery(
-                        "select uid from user_master where User = '" +client.user().username() +"';"
+                        "select uid from user_master where Username = '" +client.user().username() +"';"
                 );
                 id = resultSet.next() ? resultSet.getInt(1) : 0;
 
@@ -477,7 +477,7 @@ public class Database {
                             "and user_address.PostalCode = user_address_code_postal.pID " +
                             "and user_address_code_postal.State = user_address_code_state.sID " +
                             "and user_address_code_state.Country = user_address_code_country.cID " +
-                            "and user = '" + username + "'" +
+                            "and Username = '" + username + "'" +
                             ";"
             );
 
