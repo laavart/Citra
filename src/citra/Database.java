@@ -1,6 +1,7 @@
 package citra;
 
 import java.sql.*;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
@@ -106,6 +107,8 @@ public class Database {
                             ");"
             );
         }
+
+        db.statement.executeUpdate("set autocommit = 0;");
     }
 
     public static Database connect(Source source , String hostname, String port, String database, String user, String token) throws DBInvalidException {
@@ -239,6 +242,9 @@ public class Database {
 
         try{
             if (!checkForUser(client.user().username())) {
+
+                statement.executeUpdate("start transaction ;");
+
                 int id;
                 ResultSet resultSet = statement.executeQuery("select max(uid)+1 from user_master;");
                 id = resultSet.next() ? resultSet.getInt(1) : 1;
@@ -263,7 +269,8 @@ public class Database {
                         "insert into user_master values (" +
                                 id + "," +
                                 "'" + client.user().username() + "'," +
-                                "'" + client.user().dob() + "'," +
+                                "'" + client.user().name() + "'," +
+                                "'" + client.user().dob().format(DateTimeFormatter.ISO_DATE) + "'," +
                                 getPostalCode(client.address()) +
                                 ");"
                 );
@@ -276,10 +283,20 @@ public class Database {
                                 getPostalCode(client.address()) +
                                 ");"
                 );
+
+                statement.executeUpdate("commit ;");
             }
         }
         catch (SQLException e) {
+            e.printStackTrace();
             System.out.println("Task Failed!");
+
+            try {
+                statement.executeUpdate("rollback;");
+            }
+            catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         }
     }
 
