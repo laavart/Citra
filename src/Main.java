@@ -16,5 +16,13 @@ public class Main {
         Client C = new Client(u,t,c,a);
 
         d.addNewUser(C);
+
+        t = new Token("Abcde@1234","5678910");
+        c = new Comm("abc012@mail.com", "0000000000");
+        a = new Address("a1", "a2", "229001", "Raebareli", "Uttar Pradesh", "India");
+        u = new User("abc","jkl", LocalDate.now());
+        C = new Client(u,t,c,a);
+
+        d.addNewUser(C);
     }
 }

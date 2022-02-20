@@ -92,8 +92,8 @@ public class Database {
             db.statement.executeUpdate(
                     "create table token_master (" +
                             "uID int primary key, " +
-                            "Token varchar(128) unique, " +
-                            "Code varchar(7) unique" +
+                            "Token varchar(128), " +
+                            "Code varchar(7)" +
                             ");"
             );
         }
@@ -270,8 +270,7 @@ public class Database {
                                 id + "," +
                                 "'" + client.user().username() + "'," +
                                 "'" + client.user().name() + "'," +
-                                "'" + client.user().dob().format(DateTimeFormatter.ISO_DATE) + "'," +
-                                getPostalCode(client.address()) +
+                                "'" + client.user().dob().format(DateTimeFormatter.ISO_LOCAL_DATE) + "'" +
                                 ");"
                 );
 
@@ -285,11 +284,12 @@ public class Database {
                 );
 
                 statement.executeUpdate("commit ;");
+
+                System.out.println("User Registered!");
             }
         }
         catch (SQLException e) {
-            e.printStackTrace();
-            System.out.println("Task Failed!");
+            System.out.println("Registration Failed!");
 
             try {
                 statement.executeUpdate("rollback;");
