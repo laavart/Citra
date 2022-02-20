@@ -179,20 +179,20 @@ public class Database {
         return resultSet.next();
     }
 
-    public boolean validateUser(String user, String token) throws SQLException{
-        if(checkForUser(user)){
+    public boolean validateUser(String username, String token) throws SQLException{
+        if(checkForUser(username)){
             ResultSet resultSet = statement.executeQuery(
-                    "select token from token_master where uID = any(select uID from user_master where Username = '"+user+"');"
+                    "select token from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
             );
             return resultSet.next() && resultSet.getString("Token").equals(token);
         }
         return false;
     }
 
-    private boolean checkCode(String user, String code) throws SQLException{
-        if(checkForUser(user)) {
+    private boolean checkCode(String username, String code) throws SQLException{
+        if(checkForUser(username)) {
             ResultSet resultSet = statement.executeQuery(
-                    "select code from token_master where uID = any(select uID from user_master where Username = '"+user+"');"
+                    "select code from token_master where uID = any(select uID from user_master where Username = '"+username+"');"
             );
             return resultSet.next() && resultSet.getString("Code").equals(code);
         }
@@ -381,9 +381,9 @@ public class Database {
         return resultSet.next() ? resultSet.getString(1) : "";
     }
 
-    public void changePassword(String user, String code, String newToken){
+    public void changePassword(String username, String code, String newToken){
         try {
-            if(checkCode(user,code)) {
+            if(checkCode(username,code)) {
                 if(Pattern.compile("^.*(?=.{8,128})(?=..*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$").matcher(newToken).matches()){
                     statement.executeUpdate(
                             "update token_master " +
@@ -467,27 +467,29 @@ public class Database {
         }
     }
 
-    public Client getUser(String username){
+    public Client getUser(String username, String token){
         try {
-            ResultSet resultSet = statement.executeQuery(
-                    "select Name, DOB, Email, Mobile, AddressLine1, AddressLine2, PostalCode, City, State, Country " +
-                            "from user_address, user_master, comm_master, user_address_code_postal, user_address_code_state, user_address_code_country " +
-                            "where user_address.uID = user_master.uID " +
-                            "and user_master.uID = comm_master.uID " +
-                            "and user_address.PostalCode = user_address_code_postal.pID " +
-                            "and user_address_code_postal.State = user_address_code_state.sID " +
-                            "and user_address_code_state.Country = user_address_code_country.cID " +
-                            "and Username = '" + username + "'" +
-                            ";"
-            );
+            if(validateUser(username, token)){
+                ResultSet resultSet = statement.executeQuery(
+                        "select Name, DOB, Email, Mobile, AddressLine1, AddressLine2, PostalCode, City, State, Country " +
+                                "from user_address, user_master, comm_master, user_address_code_postal, user_address_code_state, user_address_code_country " +
+                                "where user_address.uID = user_master.uID " +
+                                "and user_master.uID = comm_master.uID " +
+                                "and user_address.PostalCode = user_address_code_postal.pID " +
+                                "and user_address_code_postal.State = user_address_code_state.sID " +
+                                "and user_address_code_state.Country = user_address_code_country.cID " +
+                                "and Username = '" + username + "'" +
+                                ";"
+                );
 
-            if(resultSet.next()){
-                User user = new User(resultSet.getString(1), resultSet.getDate(2).toLocalDate());
-                Comm comm = new Comm(resultSet.getString(3), resultSet.getString(4));
-                Address address = new Address(resultSet.getString(5), resultSet.getString(6), resultSet.getString(7), resultSet.getString(8), resultSet.getString(9), resultSet.getString(10) );
+                if (resultSet.next()) {
+                    User user = new User(resultSet.getString(1), resultSet.getDate(2).toLocalDate());
+                    Comm comm = new Comm(resultSet.getString(3), resultSet.getString(4));
+                    Address address = new Address(resultSet.getString(5), resultSet.getString(6), resultSet.getString(7), resultSet.getString(8), resultSet.getString(9), resultSet.getString(10));
 
-                return new Client(user, comm, address);
+                    return new Client(user, comm, address);
 
+                }
             }
 
         } catch (SQLException e) {
@@ -496,6 +498,17 @@ public class Database {
 
         System.out.println("User not found!");
         return null;
+    }
+
+    public ResultSet executeQuery(String query) throws SQLException {
+        if(query.contains("show")) System.out.println("Can't perform this action!");
+        else return statement.executeQuery(query);
+        return null;
+    }
+
+    public void executeUpdate(String query) throws SQLException {
+        if(query.contains("modify") || query.contains("delete") ) System.out.println("Can't perform this action!");
+        else statement.executeUpdate(query);
     }
 
     public void close() {
