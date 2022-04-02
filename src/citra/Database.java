@@ -5,9 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
-import citra.client.Address;
-import citra.client.Comm;
-import citra.client.User;
+import citra.client.*;
 import citra.exception.*;
 
 public class Database {
@@ -32,18 +30,6 @@ public class Database {
 
     private Database(){
         System.out.println("Connection Started !");
-    }
-
-    private boolean searchTable(String name) throws SQLException {
-        ResultSet resultSet =
-                CheckByOwner.contains(source)
-                        ? statement.executeQuery(source.getTables(database))
-                        : statement.executeQuery(source.getTables()) ;
-
-        while(resultSet.next())
-            if( resultSet.getString(1).equals(name) ) return true;
-
-        return false;
     }
 
     private static void initialize(Database db) throws SQLException {
@@ -72,6 +58,7 @@ public class Database {
                     "create table user_address_code_postal (" +
                             "pID int primary key," +
                             "City varchar(100)," +
+                            "PostalCode varchar(6), " +
                             "State int, " +
                             "foreign key (State) references user_address_code_state(sID)" +
                             ");"
@@ -84,8 +71,8 @@ public class Database {
                             "uID int primary key, " +
                             "AddressLine1 varchar(100), " +
                             "AddressLine2 varchar(100), " +
-                            "PostalCode int, " +
-                            "foreign key (PostalCode) references user_address_code_postal(pID) " +
+                            "Location int, " +
+                            "foreign key (Location) references user_address_code_postal(pID) " +
                             ");"
             );
         }
@@ -140,6 +127,18 @@ public class Database {
         db.statement.executeUpdate("set autocommit = 0;");
     }
 
+    public boolean searchTable(String name) throws SQLException {
+        ResultSet resultSet =
+                CheckByOwner.contains(source)
+                        ? statement.executeQuery(source.getTables(database))
+                        : statement.executeQuery(source.getTables()) ;
+
+        while(resultSet.next())
+            if( resultSet.getString(1).equals(name) ) return true;
+
+        return false;
+    }
+
     public static Database connect(Source source, String hostname, String port, String database, String user, String token) throws DBInvalidException {
         if(CheckForPort.contains(source)) throw new DBInvalidException();
         else {
@@ -164,7 +163,7 @@ public class Database {
         }
     }
 
-    public static Database connect(Source source , String hostname, String database, String user, String token) throws DBInvalidException {
+    public static Database connect(Source source, String hostname, String database, String user, String token) throws DBInvalidException {
         if(!CheckForPort.contains(source)) throw new DBInvalidException();
         else {
             try {
@@ -251,13 +250,6 @@ public class Database {
         } else return resultSet.getInt(1);
     }
 
-    private String getCountry(int cID) throws SQLException {
-        ResultSet resultSet = statement.executeQuery(
-                "select Country from user_address_code_country where cID = "+cID+";"
-        );
-        return resultSet.next() ? resultSet.getString(1) : "";
-    }
-
     private int getStateCode(Address address) throws SQLException {
         int cID = getCountryCode(address);
 
@@ -283,18 +275,11 @@ public class Database {
         } else return resultSet.getInt(1);
     }
 
-    private String getState(int sID) throws SQLException {
-        ResultSet resultSet = statement.executeQuery(
-                "select State from user_address_code_state where sID = "+sID+";"
-        );
-        return resultSet.next() ? resultSet.getString(1) : "";
-    }
-
     private int getPostalCode(Address address) throws SQLException {
         int sID = getStateCode(address);
 
         ResultSet resultSet = statement.executeQuery(
-                "select pID from user_address_code_postal where City = '"+address.city()+"';"
+                "select pID from user_address_code_postal where PostalCode = '"+address.postal()+"';"
         );
 
         if(!resultSet.next()){
@@ -307,6 +292,7 @@ public class Database {
                     "insert into user_address_code_postal values (" +
                             pID + "," +
                             "'" + address.city() + "'," +
+                            "'" + address.postal() + "'," +
                             sID +
                             ");"
             );
@@ -314,6 +300,21 @@ public class Database {
 
         } else return resultSet.getInt(1);
     }
+
+    private String getCountry(int cID) throws SQLException {
+        ResultSet resultSet = statement.executeQuery(
+                "select Country from user_address_code_country where cID = "+cID+";"
+        );
+        return resultSet.next() ? resultSet.getString(1) : "";
+    }
+
+    private String getState(int sID) throws SQLException {
+        ResultSet resultSet = statement.executeQuery(
+                "select State from user_address_code_state where sID = "+sID+";"
+        );
+        return resultSet.next() ? resultSet.getString(1) : "";
+    }
+
 
     private String getCity(int pID) throws SQLException {
         ResultSet resultSet = statement.executeQuery(
@@ -326,14 +327,16 @@ public class Database {
         try {
             if(validateWithToken(username, token)){
                 ResultSet resultSet = statement.executeQuery(
-                        "select Name, DOB, Email, Mobile, AddressLine1, AddressLine2, PostalCode, City, State, Country " +
-                                "from user_address, user_master, comm_master, user_address_code_postal, user_address_code_state, user_address_code_country " +
-                                "where user_address.uID = user_master.uID " +
-                                "and user_master.uID = comm_master.uID " +
-                                "and user_address.PostalCode = user_address_code_postal.pID " +
-                                "and user_address_code_postal.State = user_address_code_state.sID " +
-                                "and user_address_code_state.Country = user_address_code_country.cID " +
-                                "and Username = '" + username + "'" +
+                        "select " +
+                                "user_master.Name, user_master.DOB, comm_master.Email, comm_master.Mobile, user_address.AddressLine1, user_address.AddressLine2, " +
+                                "user_address_code_postal.PostalCode, user_address_code_postal.City, user_address_code_state.State, user_address_code_country.Country " +
+                                "from user_master " +
+                                "join user_address on user_master.uID = user_address.uID " +
+                                "join comm_master on user_address.uID = comm_master.uID " +
+                                "join user_address_code_postal on user_address.Location = user_address_code_postal.pID " +
+                                "join user_address_code_state on user_address_code_postal.State = user_address_code_state.sID " +
+                                "join user_address_code_country on user_address_code_state.Country = user_address_code_country.cID " +
+                                "where Username = '" + username + "'" +
                                 ";"
                 );
 
@@ -343,7 +346,6 @@ public class Database {
                     Address address = new Address(resultSet.getString(5), resultSet.getString(6), resultSet.getString(7), resultSet.getString(8), resultSet.getString(9), resultSet.getString(10));
 
                     return new Client(user, comm, address);
-
                 }
             }
 
@@ -351,11 +353,19 @@ public class Database {
             System.out.println("Error in Fetching Data!");
         }
 
-        System.out.println("User not found!");
         return null;
     }
 
-    public Client validateUser(String username, String token){
+    public boolean searchUser(String user) {
+        try {
+            return checkForUser(user) != -1;
+        } catch (SQLException e) {
+            System.out.println("Error in Search!");
+        }
+        return false;
+    }
+
+    public Pair<Integer, Client> validateUser(String username, String token){
         try {
             int id = checkForUser(username);
 
@@ -364,7 +374,7 @@ public class Database {
                         "select rvID from revoke_master where rvID = "+id+";"
                 );
 
-                if(!resultSet.next()) return getUser(username, token);
+                if(!resultSet.next()) return new Pair<>(id, getUser(username,token));
             }
         } catch (SQLException e) {
             System.out.println("Validation Error!");
@@ -374,7 +384,7 @@ public class Database {
         return null;
     }
 
-    public boolean addNewUser(Client client){
+    public int addNewUser(Client client){
         try{
             if( checkForUser(client.user().username()) != -1 )
                 System.out.println("User already Exist!");
@@ -397,7 +407,7 @@ public class Database {
 
                 int id;
                 ResultSet resultSet = statement.executeQuery("select min(rID) from reuse_master;");
-                if(resultSet.first()) id = resultSet.getInt(1);
+                if(resultSet.next()) id = resultSet.getInt(1);
                 else{
                     resultSet = statement.executeQuery("select max(uid)+1 from user_master;");
                     id = resultSet.next() ? resultSet.getInt(1) : 1;
@@ -440,7 +450,7 @@ public class Database {
                 statement.executeUpdate("commit ;");
 
                 System.out.println("User Registered!");
-                return true;
+                return id;
             }
 
         } catch (SQLException e) {
@@ -452,7 +462,29 @@ public class Database {
         } catch (SQLException ex) {
             System.out.println("Rollback Error!");
         }
-        return false;
+        return -1;
+    }
+
+    public Address getLocation(String postal){
+        try {
+            ResultSet resultSet = statement.executeQuery(
+                    "select user_address_code_postal.pID, user_address_code_state.sID, user_address_code_country.cID " +
+                            "from user_address " +
+                            "join user_address_code_postal on user_address.Location = user_address_code_postal.pID " +
+                            "join user_address_code_state on user_address_code_postal.State = user_address_code_state.sID " +
+                            "join user_address_code_country on user_address_code_state.Country = user_address_code_country.cID " +
+                            "where user_address_code_postal.PostalCode = '" + postal + "'" +
+                            ";"
+            );
+            if(resultSet.next()) {
+                int pID = resultSet.getInt(1), sID = resultSet.getInt(2), cID = resultSet.getInt(3);
+                return new Address(getCity(pID), getState(sID), getCountry(cID));
+            }
+            else System.out.println("Unable to retrieve Location");
+        } catch (SQLException e) {
+            System.out.println("Error in Location!");
+        }
+        return null;
     }
 
     public boolean changePassword(String username, String code, String newToken){
@@ -485,7 +517,7 @@ public class Database {
                 ResultSet resultSet = statement.executeQuery(
                         "select uID from user_master where Username = '"+username+"';"
                 );
-                if(resultSet.first()){
+                if(resultSet.next()){
                     int id = resultSet.getInt(1);
 
                     statement.executeUpdate("start transaction ;");
@@ -567,7 +599,7 @@ public class Database {
                         "update user_address set " +
                                 "AddressLine1 = '" + client.address().address1() + "'," +
                                 "AddressLine2 = '" + client.address().address2() + "'," +
-                                "PostalCode = " + getPostalCode(client.address()) + " " +
+                                "Location = " + getPostalCode(client.address()) + " " +
                                 "where uID = " + id +
                                 ";"
                 );
@@ -649,15 +681,4 @@ public class Database {
         }
         return false;
     }
-
-    public void close() {
-        try {
-            statement.close();
-            connection.close();
-
-        } catch (SQLException e) {
-            System.out.println("Error!");
-        }
-    }
-
 }
