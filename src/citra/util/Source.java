@@ -1,4 +1,4 @@
-package citra;
+package citra.util;
 
 public enum Source {
     MYSQL(

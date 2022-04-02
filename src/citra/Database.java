@@ -7,6 +7,8 @@ import java.util.regex.Pattern;
 
 import citra.client.*;
 import citra.exception.*;
+import citra.util.Pair;
+import citra.util.Source;
 
 public class Database {
 
