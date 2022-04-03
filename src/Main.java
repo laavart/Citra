@@ -19,8 +19,8 @@ public class Main {
 
         u = new User("abc123","jkl", LocalDate.now());
         t = new Security("Abcde@1234","5678910");
-        c = new Comm("abc012@mail.com", "0000000000");
-        a = new Address("a1", "a2", "229001", "Raebareli", "Uttar Pradesh", "India");
+        c = new Comm("abc034@mail.com", "1000000000");
+        a = new Address("a1", null, "229001", "Raebareli", "Uttar Pradesh", "India");
         C = new Client(u,t,c,a);
 
         d.addNewUser(C);

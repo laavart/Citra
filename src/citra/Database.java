@@ -408,9 +408,13 @@ public class Database {
                 statement.executeUpdate("start transaction ;");
 
                 int id;
-                ResultSet resultSet = statement.executeQuery("select min(rID) from reuse_master;");
-                if(resultSet.next()) id = resultSet.getInt(1);
+                ResultSet resultSet = statement.executeQuery("select rID from reuse_master;");
+                if(resultSet.next()) {
+                    id = resultSet.getInt("rID");
+                    statement.executeUpdate("delete from reuse_master where rID =" + id + ";");
+                }
                 else{
+                    resultSet.close();
                     resultSet = statement.executeQuery("select max(uid)+1 from user_master;");
                     id = resultSet.next() ? resultSet.getInt(1) : 1;
                 }
@@ -516,49 +520,46 @@ public class Database {
     public boolean deleteUser(String username, String code){
         try {
             if(validateWithCode(username, code)){
-                ResultSet resultSet = statement.executeQuery(
-                        "select uID from user_master where Username = '"+username+"';"
+                int id = checkForUser(username);
+
+                statement.executeUpdate("start transaction ;");
+
+                statement.executeUpdate(
+                        "delete from user_master where uID = "+id+";"
                 );
-                if(resultSet.next()){
-                    int id = resultSet.getInt(1);
 
-                    statement.executeUpdate("start transaction ;");
+                statement.executeUpdate(
+                        "delete from token_master where uID = "+id+";"
+                );
 
-                    statement.executeUpdate(
-                            "delete from user_master where uID = "+id+";"
-                    );
+                statement.executeUpdate(
+                        "delete from comm_master where uID = "+id+";"
+                );
 
-                    statement.executeUpdate(
-                            "delete from token_master where uID = "+id+";"
-                    );
+                statement.executeUpdate(
+                        "delete from user_address where uID = "+id+";"
+                );
 
-                    statement.executeUpdate(
-                            "delete from comm_master where uID = "+id+";"
-                    );
+                statement.executeUpdate(
+                        "insert into reuse_master value("+id+");"
+                );
 
-                    statement.executeUpdate(
-                            "delete from user_address where uID = "+id+";"
-                    );
+                statement.executeUpdate("commit ;");
 
-                    statement.executeUpdate(
-                            "insert into reuse_master values("+id+");"
-                    );
-
-                    statement.executeUpdate("commit ;");
-
-                    System.out.println("User Record Deleted!");
-                    return true;
-                }
+                System.out.println("User Record Deleted!");
+                return true;
             }
-        } catch (SQLException e) {
+            else System.out.println("User doesn't exists!");
+        }
+        catch (SQLException e) {
             System.out.println("Deletion Failed!");
+            try {
+                statement.executeUpdate("rollback ;");
+            } catch (SQLException ex) {
+                System.out.println("Rollback Error!");
+            }
         }
 
-        try {
-            statement.executeUpdate("rollback ;");
-        } catch (SQLException e) {
-            System.out.println("Rollback Error!");
-        }
         return false;
     }
 
