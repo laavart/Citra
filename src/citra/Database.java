@@ -461,12 +461,11 @@ public class Database {
 
         } catch (SQLException e) {
             System.out.println("Registration Failed!");
-        }
-
-        try {
-            statement.executeUpdate("rollback;");
-        } catch (SQLException ex) {
-            System.out.println("Rollback Error!");
+            try {
+                statement.executeUpdate("rollback;");
+            } catch (SQLException ex) {
+                System.out.println("Rollback Error!");
+            }
         }
         return -1;
     }
