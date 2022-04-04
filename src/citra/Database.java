@@ -343,7 +343,7 @@ public class Database {
                 );
 
                 if (resultSet.next()) {
-                    User user = new User(resultSet.getString(1), resultSet.getDate(2).toLocalDate());
+                    User user = new User(username, resultSet.getString(1), resultSet.getDate(2).toLocalDate());
                     Comm comm = new Comm(resultSet.getString(3), resultSet.getString(4));
                     Address address = new Address(resultSet.getString(5), resultSet.getString(6), resultSet.getString(7), resultSet.getString(8), resultSet.getString(9), resultSet.getString(10));
 
