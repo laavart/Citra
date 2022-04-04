@@ -24,5 +24,13 @@ public class Main {
         C = new Client(u,t,c,a);
 
         d.addNewUser(C);
+
+        u = new User("abc12","jkl", LocalDate.now());
+        t = new Security("Abcde@1234","5678910");
+        c = new Comm("abc056@mail.com", "0000000001");
+        a = new Address("a1", null, "229001", "Lucknow", "Uttar Pradesh", "India");
+        C = new Client(u,t,c,a);
+
+        d.addNewUser(C);
     }
 }
