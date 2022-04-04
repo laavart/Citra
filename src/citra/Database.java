@@ -376,14 +376,17 @@ public class Database {
                         "select rvID from revoke_master where rvID = "+id+";"
                 );
 
-                if(!resultSet.next()) return new Pair<>(id, getUser(username,token));
+                if(!resultSet.next()) {
+                    Client client = getUser(username, token);
+                    if(client != null) return new Pair<>(id, client);
+                }
             }
         } catch (SQLException e) {
             System.out.println("Validation Error!");
         }
 
         System.out.println("User not found!");
-        return null;
+        return new Pair<>(-1, null);
     }
 
     public int addNewUser(Client client){
