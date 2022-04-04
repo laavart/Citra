@@ -673,13 +673,15 @@ public class Database {
     }
 
     public ResultSet executeQuery(String query) throws SQLException {
-        if(query.contains("show")) System.out.println("Can't perform this action!");
+        if(query.contains("user_address")||query.contains("user_master")||query.contains("comm_master")||query.contains("token_master")||query.contains("reuse_master")||query.contains("revoke_master"))
+            System.out.println("Can't perform this action!");
         else return statement.executeQuery(query);
         return null;
     }
 
     public boolean executeUpdate(String query) throws SQLException {
-        if(query.contains("modify") || query.contains("delete") ) System.out.println("Can't perform this action!");
+        if(query.contains("user_address")||query.contains("user_master")||query.contains("comm_master")||query.contains("token_master")||query.contains("reuse_master")||query.contains("revoke_master"))
+            System.out.println("Can't perform this action!");
         else {
             statement.executeUpdate(query);
             return true;
