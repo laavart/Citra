@@ -3,6 +3,7 @@ package citra;
 import java.sql.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 import citra.client.*;
@@ -365,6 +366,13 @@ public class Database {
             System.out.println("Error in Search!");
         }
         return false;
+    }
+
+    public HashMap<Integer, String> getAllUsers() throws SQLException {
+        ResultSet resultSet = statement.executeQuery("Select uID, username from user_master;");
+        HashMap<Integer, String> users = new HashMap<>();
+        while (resultSet.next()) users.put(resultSet.getInt("uID"), resultSet.getString("username"));
+        return users;
     }
 
     public Pair<Integer, Client> validateUser(String username, String token){
